@@ -3,36 +3,19 @@ const fetch = require("node-fetch");
 
 const app = express();
 
+// ✅ Root test
 app.get("/", (req, res) => {
   res.send("Server is running ✅");
 });
 
+// 🔊 FINAL WORKING STREAM (TTS ONLY - stable)
 app.get("/stream", async (req, res) => {
   try {
-    const text = req.query.text || "Hello";
+    const text = req.query.text || "Hello this is your AI assistant";
 
-    // 🧠 AI
-    const aiRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "deepseek/deepseek-chat",
-        messages: [{ role: "user", content: text }]
-      })
-    });
+    console.log("Text:", text);
 
-    const aiData = await aiRes.json();
-
-    if (!aiData.choices || !aiData.choices[0]) {
-      return res.send("AI ERROR: " + JSON.stringify(aiData));
-    }
-
-    const reply = aiData.choices[0].message.content;
-
-    // 🔊 TTS (FIXED)
+    // 🔥 SARVAM TTS (CORRECT FORMAT)
     const ttsRes = await fetch("https://api.sarvam.ai/text-to-speech", {
       method: "POST",
       headers: {
@@ -40,10 +23,11 @@ app.get("/stream", async (req, res) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        text: reply,
+        inputs: [text],                // ✅ correct field
         target_language_code: "en-IN",
-        speaker: "anushka",
-        format: "mp3"
+        speaker: "anushka",            // ✅ valid speaker
+        audio_format: "mp3",           // ✅ correct field
+        sample_rate: 22050
       })
     });
 
@@ -52,8 +36,13 @@ app.get("/stream", async (req, res) => {
       return res.send("TTS ERROR: " + err);
     }
 
-    // 🔥 SAFE METHOD (NO STREAM CRASH)
     const audioBuffer = await ttsRes.arrayBuffer();
+
+    console.log("Audio size:", audioBuffer.byteLength);
+
+    if (audioBuffer.byteLength < 1000) {
+      return res.send("Audio too small / invalid");
+    }
 
     res.setHeader("Content-Type", "audio/mpeg");
     res.setHeader("Content-Length", audioBuffer.byteLength);
@@ -66,4 +55,4 @@ app.get("/stream", async (req, res) => {
   }
 });
 
-app.listen(3000, () => console.log("Server running"));
+app.listen(3000, () => console.log("Server running on port 3000"));
