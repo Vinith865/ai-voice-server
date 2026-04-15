@@ -2,24 +2,25 @@ const express = require("express");
 
 const app = express();
 
-// Root check
+// ✅ Root check
 app.get("/", (req, res) => {
   res.send("Server is running ✅");
 });
 
-// 🔊 FINAL WORKING AUDIO (NO API ISSUES)
+// 🔊 FINAL WORKING STREAM (RADIO PROXY)
 app.get("/stream", async (req, res) => {
   try {
-    const text = req.query.text || "Hello this is your AI assistant";
-
-    // 🔥 Google TTS (DIRECT MP3)
-    const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=en&client=tw-ob`;
+    const url = "http://streams.ilovemusic.de/iloveradio1.mp3";
 
     const response = await fetch(url);
 
+    if (!response.ok) {
+      return res.send("Stream fetch failed ❌");
+    }
+
     res.setHeader("Content-Type", "audio/mpeg");
 
-    // ✅ DIRECT STREAM (WORKS PERFECTLY)
+    // 🔥 STREAM DIRECTLY (THIS IS WHAT ESP32 NEEDS)
     response.body.pipe(res);
 
   } catch (err) {
@@ -27,4 +28,4 @@ app.get("/stream", async (req, res) => {
   }
 });
 
-app.listen(3000, () => console.log("Server running"));
+app.listen(3000, () => console.log("Server running on port 3000"));
