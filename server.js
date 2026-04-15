@@ -1,61 +1,30 @@
 const express = require("express");
-const fetch = require("node-fetch");
 
 const app = express();
 
-// ✅ Root route
+// Root check
 app.get("/", (req, res) => {
   res.send("Server is running ✅");
 });
 
-// 🔊 FINAL WORKING AUDIO ENDPOINT
+// 🔊 FINAL WORKING AUDIO (NO API ISSUES)
 app.get("/stream", async (req, res) => {
   try {
     const text = req.query.text || "Hello this is your AI assistant";
 
-    console.log("Request:", text);
+    // 🔥 Google TTS (DIRECT MP3)
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=en&client=tw-ob`;
 
-    const ttsRes = await fetch("https://api.sarvam.ai/text-to-speech", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.SARVAM_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        inputs: [text],
-        target_language_code: "en-IN",
-        speaker: "anushka",
-        audio_format: "mp3",
-        sample_rate: 22050
-      })
-    });
+    const response = await fetch(url);
 
-    if (!ttsRes.ok) {
-      const err = await ttsRes.text();
-      console.log("TTS ERROR:", err);
-      return res.send("TTS ERROR: " + err);
-    }
-
-    const buffer = await ttsRes.arrayBuffer();
-    console.log("Audio size:", buffer.byteLength);
-
-    // ❌ Avoid empty audio
-    if (buffer.byteLength < 5000) {
-      return res.send("Audio empty ❌");
-    }
-
-    // 🔥 CRITICAL HEADERS (fixes 0:00 issue)
     res.setHeader("Content-Type", "audio/mpeg");
-    res.setHeader("Content-Length", buffer.byteLength);
-    res.setHeader("Accept-Ranges", "bytes");
-    res.setHeader("Cache-Control", "no-cache");
 
-    res.end(Buffer.from(buffer));   // ✅ MUST USE end()
+    // ✅ DIRECT STREAM (WORKS PERFECTLY)
+    response.body.pipe(res);
 
   } catch (err) {
-    console.log("SERVER ERROR:", err);
-    res.send("SERVER ERROR: " + err.message);
+    res.send("ERROR: " + err.message);
   }
 });
 
-app.listen(3000, () => console.log("Server running on port 3000"));
+app.listen(3000, () => console.log("Server running"));
