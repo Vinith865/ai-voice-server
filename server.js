@@ -3,12 +3,12 @@ const fetch = require("node-fetch");
 
 const app = express();
 
-// ✅ Root check
+// ✅ Root route
 app.get("/", (req, res) => {
   res.send("Server is running ✅");
 });
 
-// 🔊 FINAL STREAM (MP3 - ESP32 compatible)
+// 🔊 FINAL WORKING AUDIO ENDPOINT
 app.get("/stream", async (req, res) => {
   try {
     const text = req.query.text || "Hello this is your AI assistant";
@@ -25,7 +25,7 @@ app.get("/stream", async (req, res) => {
         inputs: [text],
         target_language_code: "en-IN",
         speaker: "anushka",
-        audio_format: "mp3",     // 🔥 IMPORTANT
+        audio_format: "mp3",
         sample_rate: 22050
       })
     });
@@ -36,10 +36,21 @@ app.get("/stream", async (req, res) => {
       return res.send("TTS ERROR: " + err);
     }
 
-    // 🔥 STREAM DIRECTLY (NO BUFFER)
-    res.setHeader("Content-Type", "audio/mpeg");
+    const buffer = await ttsRes.arrayBuffer();
+    console.log("Audio size:", buffer.byteLength);
 
-    ttsRes.body.pipe(res);
+    // ❌ Avoid empty audio
+    if (buffer.byteLength < 5000) {
+      return res.send("Audio empty ❌");
+    }
+
+    // 🔥 CRITICAL HEADERS (fixes 0:00 issue)
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.setHeader("Content-Length", buffer.byteLength);
+    res.setHeader("Accept-Ranges", "bytes");
+    res.setHeader("Cache-Control", "no-cache");
+
+    res.end(Buffer.from(buffer));   // ✅ MUST USE end()
 
   } catch (err) {
     console.log("SERVER ERROR:", err);
