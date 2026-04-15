@@ -8,7 +8,7 @@ app.get("/", (req, res) => {
   res.send("Server is running ✅");
 });
 
-// 🔊 FINAL WORKING AUDIO (WAV - ESP32 compatible)
+// 🔊 FINAL STREAM (MP3 - ESP32 compatible)
 app.get("/stream", async (req, res) => {
   try {
     const text = req.query.text || "Hello this is your AI assistant";
@@ -25,8 +25,8 @@ app.get("/stream", async (req, res) => {
         inputs: [text],
         target_language_code: "en-IN",
         speaker: "anushka",
-        audio_format: "wav",      // ✅ WAV works better
-        sample_rate: 16000        // ✅ IMPORTANT
+        audio_format: "mp3",     // 🔥 IMPORTANT
+        sample_rate: 22050
       })
     });
 
@@ -36,19 +36,10 @@ app.get("/stream", async (req, res) => {
       return res.send("TTS ERROR: " + err);
     }
 
-    const audioBuffer = await ttsRes.arrayBuffer();
+    // 🔥 STREAM DIRECTLY (NO BUFFER)
+    res.setHeader("Content-Type", "audio/mpeg");
 
-    console.log("Audio size:", audioBuffer.byteLength);
-
-    // ❌ Prevent empty audio
-    if (audioBuffer.byteLength < 1000) {
-      return res.send("Audio empty ❌");
-    }
-
-    res.setHeader("Content-Type", "audio/wav");
-    res.setHeader("Content-Length", audioBuffer.byteLength);
-
-    res.send(Buffer.from(audioBuffer));
+    ttsRes.body.pipe(res);
 
   } catch (err) {
     console.log("SERVER ERROR:", err);
@@ -56,4 +47,4 @@ app.get("/stream", async (req, res) => {
   }
 });
 
-app.listen(3000, () => console.log("Server running"));
+app.listen(3000, () => console.log("Server running on port 3000"));
