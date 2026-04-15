@@ -3,19 +3,18 @@ const fetch = require("node-fetch");
 
 const app = express();
 
-// ✅ Root test
+// ✅ Root check
 app.get("/", (req, res) => {
   res.send("Server is running ✅");
 });
 
-// 🔊 FINAL WORKING STREAM (TTS ONLY - stable)
+// 🔊 FINAL WORKING AUDIO (WAV - ESP32 compatible)
 app.get("/stream", async (req, res) => {
   try {
     const text = req.query.text || "Hello this is your AI assistant";
 
-    console.log("Text:", text);
+    console.log("Request:", text);
 
-    // 🔥 SARVAM TTS (CORRECT FORMAT)
     const ttsRes = await fetch("https://api.sarvam.ai/text-to-speech", {
       method: "POST",
       headers: {
@@ -23,16 +22,17 @@ app.get("/stream", async (req, res) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        inputs: [text],                // ✅ correct field
+        inputs: [text],
         target_language_code: "en-IN",
-        speaker: "anushka",            // ✅ valid speaker
-        audio_format: "mp3",           // ✅ correct field
-        sample_rate: 22050
+        speaker: "anushka",
+        audio_format: "wav",      // ✅ WAV works better
+        sample_rate: 16000        // ✅ IMPORTANT
       })
     });
 
     if (!ttsRes.ok) {
       const err = await ttsRes.text();
+      console.log("TTS ERROR:", err);
       return res.send("TTS ERROR: " + err);
     }
 
@@ -40,19 +40,20 @@ app.get("/stream", async (req, res) => {
 
     console.log("Audio size:", audioBuffer.byteLength);
 
+    // ❌ Prevent empty audio
     if (audioBuffer.byteLength < 1000) {
-      return res.send("Audio too small / invalid");
+      return res.send("Audio empty ❌");
     }
 
-    res.setHeader("Content-Type", "audio/mpeg");
+    res.setHeader("Content-Type", "audio/wav");
     res.setHeader("Content-Length", audioBuffer.byteLength);
 
     res.send(Buffer.from(audioBuffer));
 
   } catch (err) {
-    console.error(err);
+    console.log("SERVER ERROR:", err);
     res.send("SERVER ERROR: " + err.message);
   }
 });
 
-app.listen(3000, () => console.log("Server running on port 3000"));
+app.listen(3000, () => console.log("Server running"));
