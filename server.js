@@ -3,19 +3,15 @@ const fetch = require("node-fetch");
 
 const app = express();
 
-// ✅ Root route (for testing)
 app.get("/", (req, res) => {
   res.send("Server is running ✅");
 });
 
-// 🔊 Streaming route
 app.get("/stream", async (req, res) => {
   try {
     const text = req.query.text || "Hello";
 
-    console.log("Input:", text);
-
-    // 🧠 AI Request
+    // 🧠 AI
     const aiRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -29,16 +25,14 @@ app.get("/stream", async (req, res) => {
     });
 
     const aiData = await aiRes.json();
-    console.log("AI Data:", aiData);
 
     if (!aiData.choices || !aiData.choices[0]) {
       return res.send("AI ERROR: " + JSON.stringify(aiData));
     }
 
     const reply = aiData.choices[0].message.content;
-    console.log("Reply:", reply);
 
-    // 🔊 TTS Request (FIXED SPEAKER)
+    // 🔊 TTS (FIXED)
     const ttsRes = await fetch("https://api.sarvam.ai/text-to-speech", {
       method: "POST",
       headers: {
@@ -48,7 +42,7 @@ app.get("/stream", async (req, res) => {
       body: JSON.stringify({
         text: reply,
         target_language_code: "en-IN",
-        speaker: "anushka",   // ✅ FIXED
+        speaker: "anushka",
         format: "mp3"
       })
     });
@@ -58,22 +52,18 @@ app.get("/stream", async (req, res) => {
       return res.send("TTS ERROR: " + err);
     }
 
-    // 🔥 Proper streaming (important)
+    // 🔥 SAFE METHOD (NO STREAM CRASH)
+    const audioBuffer = await ttsRes.arrayBuffer();
+
     res.setHeader("Content-Type", "audio/mpeg");
-    res.setHeader("Transfer-Encoding", "identity");
+    res.setHeader("Content-Length", audioBuffer.byteLength);
 
-    ttsRes.body.on("data", (chunk) => {
-      res.write(chunk);
-    });
-
-    ttsRes.body.on("end", () => {
-      res.end();
-    });
+    res.send(Buffer.from(audioBuffer));
 
   } catch (err) {
-    console.error("SERVER ERROR:", err);
+    console.error(err);
     res.send("SERVER ERROR: " + err.message);
   }
 });
 
-app.listen(3000, () => console.log("Server running on port 3000"));
+app.listen(3000, () => console.log("Server running"));
